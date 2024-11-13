@@ -137,6 +137,7 @@ internal static class SimaiProcess
         {
             float bpm = 0;
             var curHSpeed = 1f;
+            var curSVeloc = 1f;
             double time = first; //in seconds
             double requestedTime = 0;
             var beats = 4;
@@ -236,6 +237,30 @@ internal static class SimaiProcess
                     continue;
                 }
 
+                if (text[i] == 'S')
+                //Get HS
+                {
+                    haveNote = false;
+                    noteTemp = "";
+                    var sv_s = "";
+                    if (text[i + 1] == 'V' && text[i + 2] == '*')
+                    {
+                        i += 3;
+                        Xcount += 3;
+                    }
+
+                    while (text[i] != '>')
+                    {
+                        sv_s += text[i];
+                        i++;
+                        Xcount++;
+                    }
+                    //SV待完善
+                    curHSpeed = float.Parse(sv_s);
+                    //Console.WriteLine("SV" + curHSpeed);
+                    continue;
+                }
+
                 if (isNote(text[i])) haveNote = true;
                 if (haveNote && text[i] != ',') noteTemp += text[i];
                 if (text[i] == ',')
@@ -247,18 +272,18 @@ internal static class SimaiProcess
                             // 伪双
                             var fakeEachList = noteTemp.Split('`');
                             var fakeTime = time;
-                            var timeInterval = 1.875 / bpm; // 128分音
+                            var timeInterval = 0.625 / bpm; // 384分音
                             foreach (var fakeEachGroup in fakeEachList)
                             {
                                 Console.WriteLine(fakeEachGroup);
                                 _notelist.Add(new SimaiTimingPoint(fakeTime, Xcount, Ycount, fakeEachGroup, bpm,
-                                    curHSpeed));
+                                    curHSpeed, curSVeloc));
                                 fakeTime += timeInterval;
                             }
                         }
                         else
                         {
-                            _notelist.Add(new SimaiTimingPoint(time, Xcount, Ycount, noteTemp, bpm, curHSpeed));
+                            _notelist.Add(new SimaiTimingPoint(time, Xcount, Ycount, noteTemp, bpm, curHSpeed, curSVeloc));
                         }
                         //Console.WriteLine("Note:" + noteTemp);
 
@@ -319,6 +344,7 @@ internal class SimaiTimingPoint
     public float currentBpm = -1;
     public bool havePlayed;
     public float HSpeed = 1f;
+    public float SVeloc = 1f;
     public List<SimaiNote> noteList = new(); //only used for json serialize
     public string notesContent;
     public int rawTextPositionX;
@@ -326,7 +352,7 @@ internal class SimaiTimingPoint
     public double time;
 
     public SimaiTimingPoint(double _time, int textposX = 0, int textposY = 0, string _content = "", float bpm = 0f,
-        float _hspeed = 1f)
+        float _hspeed = 1f, float _sveloc = 1f)
     {
         time = _time;
         rawTextPositionX = textposX;
@@ -334,6 +360,7 @@ internal class SimaiTimingPoint
         notesContent = _content.Replace("\n", "").Replace(" ", "");
         currentBpm = bpm;
         HSpeed = _hspeed;
+        SVeloc = _sveloc;
     }
 
     public List<SimaiNote> getNotes()
@@ -418,6 +445,7 @@ internal class SimaiTimingPoint
         }
 
         if (noteText.Contains('f')) simaiNote.isHanabi = true;
+        //if (noteText.Contains('m')) simaiNote.isMine = true;
 
         //hold
         if (noteText.Contains('h'))
@@ -498,6 +526,42 @@ internal class SimaiTimingPoint
             noteText = noteText.Replace("b", "");
         }
 
+        if (noteText.Contains('m'))
+        {
+            if (simaiNote.noteType == SimaiNoteType.Slide)
+            {
+                // 如果是Slide 则要检查这个b到底是星星头的还是Slide本体的
+
+                // !!! **SHIT CODE HERE** !!!
+                var startIndex = 0;
+                while ((startIndex = noteText.IndexOf('m', startIndex)) != -1)
+                {
+                    if (startIndex < noteText.Length - 1)
+                    {
+                        // 如果b不是最后一个字符 我们就检查b之后一个字符是不是`[`符号：如果是 那么就是break slide
+                        if (noteText[startIndex + 1] == '[')
+                            simaiNote.isSlideMine = true;
+                        else
+                            // 否则 那么不管这个break出现在slide的哪一个地方 我们都认为他是星星头的break
+                            // SHIT CODE!
+                            simaiNote.isMine = true;
+                    }
+                    else
+                    {
+                        // 如果b符号是整个文本的最后一个字符 那么也是break slide（Simai语法）
+                        simaiNote.isSlideMine = true;
+                    }
+
+                    startIndex++;
+                }
+            }
+            else
+            {
+                // 除此之外的Break就无所谓了
+                simaiNote.isMine = true;
+            }
+            noteText = noteText.Replace("m", "");
+        }
         //EX
         if (noteText.Contains('x'))
         {
@@ -654,10 +718,12 @@ internal class SimaiNote
     public double holdTime;
     public bool isBreak;
     public bool isEx;
+    public bool isMine;
     public bool isFakeRotate;
     public bool isForceStar;
     public bool isHanabi;
     public bool isSlideBreak;
+    public bool isSlideMine;
     public bool isSlideNoHead;
 
     public string? noteContent; //used for star explain

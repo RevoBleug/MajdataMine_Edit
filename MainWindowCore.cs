@@ -327,7 +327,7 @@ public partial class MainWindow : Window
         SyntaxCheckButton.IsEnabled = true;
         AutoSaveManager.Of().SetAutoSaveEnable(true);
         SetSavedState(true);
-        SyntaxCheck();
+        //SyntaxCheck();
     }
 
     internal async void SyntaxCheck()
@@ -597,7 +597,7 @@ public partial class MainWindow : Window
     private void ChartChangeTimer_Elapsed(object? sender, ElapsedEventArgs e)
     {
         Console.WriteLine("TextChanged");
-        SyntaxCheck();
+        //SyntaxCheck();
         Dispatcher.Invoke(
             delegate
             {
@@ -781,7 +781,7 @@ public partial class MainWindow : Window
                 if (note == null) break;
                 if (note.time - currentTime > deltatime) continue;
                 var notes = note.getNotes();
-                var isEach = notes.Count(o => !o.isSlideNoHead) > 1;
+                var isEach = notes.Count(o => !o.isSlideNoHead && !o.isMine) > 1;
 
                 var x = ((float)(note.time / step) - startindex) * linewidth;
 
@@ -809,7 +809,9 @@ public partial class MainWindow : Window
                         if (noteD.isForceStar)
                         {
                             pen.Width = 3;
-                            if (noteD.isBreak)
+                            if (noteD.isMine)
+                                pen.Color = Color.LightGray;
+                            else if (noteD.isBreak)
                                 pen.Color = Color.OrangeRed;
                             else if (isEach)
                                 pen.Color = Color.Gold;
@@ -822,7 +824,9 @@ public partial class MainWindow : Window
                         else
                         {
                             pen.Width = 2;
-                            if (noteD.isBreak)
+                            if (noteD.isMine)
+                                pen.Color = Color.LightGray;
+                            else if (noteD.isBreak)
                                 pen.Color = Color.OrangeRed;
                             else if (isEach)
                                 pen.Color = Color.Gold;
@@ -835,14 +839,21 @@ public partial class MainWindow : Window
                     if (noteD.noteType == SimaiNoteType.Touch)
                     {
                         pen.Width = 2;
-                        pen.Color = isEach ? Color.Gold : Color.DeepSkyBlue;
+                        if (noteD.isMine)
+                            pen.Color = Color.LightGray;
+                        else if (isEach)
+                            pen.Color = Color.Gold;
+                        else
+                            pen.Color = Color.DeepSkyBlue;
                         graphics.DrawRectangle(pen, x - 2.5f, y - 2.5f, 5, 5);
                     }
 
                     if (noteD.noteType == SimaiNoteType.Hold)
                     {
                         pen.Width = 3;
-                        if (noteD.isBreak)
+                        if (noteD.isMine)
+                            pen.Color = Color.LightGray;
+                        else if (noteD.isBreak)
                             pen.Color = Color.OrangeRed;
                         else if (isEach)
                             pen.Color = Color.Gold;
@@ -865,12 +876,16 @@ public partial class MainWindow : Window
                         //Console.WriteLine("HoldPixel"+ xDelta);
                         if (!float.IsNormal(xDelta)) xDelta = ushort.MaxValue;
                         if (xDelta < 1f) xDelta = 1;
-
+                        //
                         pen.Color = Color.FromArgb(200, 255, 75, 0);
+                        if (noteD.isMine)
+                            pen.Color = Color.LightGray;
                         graphics.DrawLine(pen, x, y, x + xDelta * 4f, y);
                         pen.Color = Color.FromArgb(200, 255, 241, 0);
                         graphics.DrawLine(pen, x, y, x + xDelta * 3f, y);
                         pen.Color = Color.FromArgb(200, 2, 165, 89);
+                        if (noteD.isMine)
+                            pen.Color = Color.Gray;
                         graphics.DrawLine(pen, x, y, x + xDelta * 2f, y);
                         pen.Color = Color.FromArgb(200, 0, 140, 254);
                         graphics.DrawLine(pen, x, y, x + xDelta, y);
@@ -881,7 +896,9 @@ public partial class MainWindow : Window
                         pen.Width = 3;
                         if (!noteD.isSlideNoHead)
                         {
-                            if (noteD.isBreak)
+                            if (noteD.isMine)
+                                pen.Color = Color.LightGray;
+                            else if (noteD.isBreak)
                                 pen.Color = Color.OrangeRed;
                             else if (isEach)
                                 pen.Color = Color.Gold;
@@ -891,10 +908,11 @@ public partial class MainWindow : Window
                             graphics.DrawString("*", new Font("Consolas", 12, System.Drawing.FontStyle.Bold), brush,
                                 new PointF(x - 7f, y - 7f));
                         }
-
-                        if (noteD.isSlideBreak)
+                        if (noteD.isSlideMine)
+                            pen.Color = Color.LightGray;
+                        else if (noteD.isSlideBreak)
                             pen.Color = Color.OrangeRed;
-                        else if (notes.Count(o => o.noteType == SimaiNoteType.Slide) >= 2)
+                        else if (notes.Count(o => o.noteType == SimaiNoteType.Slide && !o.isSlideMine) >= 2)
                             pen.Color = Color.Gold;
                         else
                             pen.Color = Color.SkyBlue;
@@ -1121,13 +1139,13 @@ public partial class MainWindow : Window
             TogglePause();
         else
         {
-            if (lastEditorState != EditorControlMethod.Pause && 
+            /*if (lastEditorState != EditorControlMethod.Pause && 
                 editorSetting!.SyntaxCheckLevel == 2 && 
                 SyntaxChecker.GetErrorCount() != 0)
             {
                 ShowErrorWindow();
                 return;
-            }
+            }*/
             TogglePlay(playMethod);
         }
             
@@ -1135,11 +1153,11 @@ public partial class MainWindow : Window
 
     private void TogglePlayAndStop(PlayMethod playMethod = PlayMethod.Normal)
     {
-        if (editorSetting!.SyntaxCheckLevel == 2 && SyntaxChecker.GetErrorCount() != 0)
+        /*if (editorSetting!.SyntaxCheckLevel == 2 && SyntaxChecker.GetErrorCount() != 0)
         {
             ShowErrorWindow();
             return;
-        }
+        }*/
         if (isPlaying)
             ToggleStop();
         else

@@ -1,4 +1,2 @@
-***
-请参阅[MajdataView](https://github.com/LingFeng-bbben/MajdataView)
-***
-今后的更新和说明也将在那个页面发布。请留意。
+# MajDataMine-Edit
+ A personal edition for Majdata based on Majdata 4.3.1. The WPF editor part of the Majdata.

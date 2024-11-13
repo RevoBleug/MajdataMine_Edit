@@ -1,4 +1,5 @@
 ﻿
+using System.Runtime.Intrinsics.Arm;
 using System.Windows.Media.Animation;
 using System.Windows.Navigation;
 
@@ -220,7 +221,7 @@ namespace MajdataEdit.SyntaxModule
                     return false;
                 }               
 
-                //HSpeed变速语法检查
+                //HSpeed&SV变速语法检查
                 if(tagIndex.Length != 0)
                 {
                     var tagHead = tagIndex[0];
@@ -228,6 +229,7 @@ namespace MajdataEdit.SyntaxModule
                     var body = simaiStr[(tagHead + 1)..tagTail];
 
                     var s = body.Split("HS*");
+                    s = body.Split("SV*");
 
                     if (s.Length != 2)//正常情况分割后的得到的Array长度应当是2
                     {
@@ -295,7 +297,7 @@ namespace MajdataEdit.SyntaxModule
             return true;
         }
         /// <summary>
-        /// 寻找HSpeed的主体部分
+        /// 寻找HSpeed的主体部分&&SV
         /// </summary>
         /// <param name="simaiStr"></param>
         /// <returns>
@@ -315,7 +317,7 @@ namespace MajdataEdit.SyntaxModule
                 if(i + 3 < simaiStr.Length)
                 {
                     var s = simaiStr[i..(i + 3)];
-                    if(s == "HS*")
+                    if(s == "HS*" || s == "SV*")
                     {
                         if (tagHead != null)
                             return null;
@@ -435,7 +437,7 @@ namespace MajdataEdit.SyntaxModule
             {
                 //防止出现2h[],2h[,2hxx这种傻蛋情况
                 foreach (var s in holdStr[2..])
-                    if (s is not ('b' or 'x'))
+                    if (s is not ('b' or 'x' or 'm'))
                         return false;
                 return true;
             }
@@ -475,9 +477,9 @@ namespace MajdataEdit.SyntaxModule
         {
             if (slideStr.Length < 3)
                 return false;
-            if (slideStr[1] is ('b' or 'x') && slideStr[2] is ('b' or 'x'))
+            if (slideStr[1] is ('b' or 'x' or 'm') && slideStr[2] is ('b' or 'x' or 'm'))
                 slideStr = slideStr.Remove(1,2);
-            else if(slideStr[1] is ('b' or 'x'))
+            else if(slideStr[1] is ('b' or 'x' or 'm'))
                 slideStr = slideStr.Remove(1, 1);
             
             int starPoint = int.Parse(slideStr[0..1]);//星星头键位
@@ -570,7 +572,7 @@ namespace MajdataEdit.SyntaxModule
                             return false;
 
                         //将当前位置设置为"]"的后一位
-                        if (_slideStr.Last() == 'b')
+                        if (_slideStr.Last() == 'b' || _slideStr.Last() == 'm')
                             i = bodyIndex[headIndex + 1] + 1;
                         else if (_slideStr.Last() == ']')
                             i = bodyIndex[headIndex + 1];
@@ -851,7 +853,7 @@ namespace MajdataEdit.SyntaxModule
                 return true;
             else if(s.Length == 2)// e.g. 28 , 2b , 2x
             {
-                if (s[1] is ('b' or 'x'))
+                if (s[1] is ('b' or 'x' or 'm'))
                     return true;
                 else
                     return int.TryParse(s, out int i) && (PointCheck(i % 10) && PointCheck(i / 10));
@@ -860,8 +862,9 @@ namespace MajdataEdit.SyntaxModule
             {
                 var isBreak = s[1] is 'b' || s[2] is 'b';
                 var isHanabi = s[1] is 'x' || s[2] is 'x';
+                var isMine = s[1] is 'm' || s[2] is 'm';
 
-                return isBreak && isHanabi;
+                return (isBreak && isHanabi) || isMine;
             }
 
             return false;//其他情况即非法
@@ -884,7 +887,7 @@ namespace MajdataEdit.SyntaxModule
                 return false;
             if (s.Length < 2 || header.Length < 2)
                 return false;
-            else if (header is ("Ch" or "C1h" or "Chf" or "C1hf"))//TouchHold特例
+            else if (header is ("Ch" or "C1h" or "Chf" or "C1hf" or "Chm" or "C1hm"))//TouchHold特例
                 return true;
             //Hold严格判定：第二位必须是'h'，'b'，'x'不限制位置
             //妥协一下，改为松判定
@@ -895,8 +898,8 @@ namespace MajdataEdit.SyntaxModule
             return header.Length switch
             {
                 2 => header[1] is 'h',
-                3 => header.Contains('h') && (header.Contains('b') || header.Contains('x')),
-                4 => header.Contains('h') && header.Contains('b') && header.Contains('x'),
+                3 => header.Contains('h') && (header.Contains('b') || header.Contains('x') || header.Contains('m')),
+                4 => header.Contains('h') && header.Contains('b') && header.Contains('x') && header.Contains('m'),
                 _ => false
             };
 
@@ -942,14 +945,15 @@ namespace MajdataEdit.SyntaxModule
 
             if (header.Length == 1)// e.g. 1-8处理后header为1
                 return true;
-            else if (header.Length == 2 && header[1] is 'b' or 'x')// e.g. 1x,1b
+            else if (header.Length == 2 && header[1] is 'b' or 'x' or 'm')// e.g. 1x,1b
                 return true;
-            else if (header.Length == 3)// e.g. 1bx,1xb
+            else if (header.Length == 3)// e.g. 1bx,1xb;m不能与x和b共存
             {
                 var isBreak = s[1] is 'b' || s[2] is 'b';
                 var isHanabi = s[1] is 'x' || s[2] is 'x';
+                var isMine = s[1] is 'm' || s[2] is 'm';
 
-                return isBreak && isHanabi;
+                return (isBreak && isHanabi) || isMine;
             }
 
             //出现其他长度一般是Slide种类错误
@@ -964,19 +968,19 @@ namespace MajdataEdit.SyntaxModule
         {
             char sensor = s[0];
 
-            if (s.Length is not (1 or 2 or 3))//Touch长度只能是1,2或3 ; e.g. C,B1,B1f
+            if (s.Length is not (1 or 2 or 3))//Touch长度只能是1,2或3 ; e.g. C,B1,B1f,B1m
                 return false;
 
             if (s.Length == 1)// C
                 return s[0] == 'C';
             else if (!SensorList.Contains(sensor))// 判断触控区号是否合法
                 return false;
-            else if (s.Length == 2 && s[0] == 'C')// C1 or Cf
-                return s[1] is '1' or 'f';
-            else if (s.Length == 3 && s[0] == 'C')// C1f
-                return s[1] == '1' && s[2] == 'f';
-            else if (s.Length == 3)// A1f B1f
-                return s[2] == 'f' && int.TryParse(s[1..2], out int i) && PointCheck(i);
+            else if (s.Length == 2 && s[0] == 'C')// C1 or Cf or Cm
+                return s[1] is '1' or 'f' or 'm';
+            else if (s.Length == 3 && s[0] == 'C')// C1f or C1m
+                return s[1] == '1' && (s[2] == 'f' || s[2] == 'm');
+            else if (s.Length == 3)// A1f B1f A1m B1m
+                return (s[2] == 'f' || s[2] == 'm') && int.TryParse(s[1..2], out int i) && PointCheck(i);
             else//A1 B1
                 return int.TryParse(s[1..2], out int i) && PointCheck(i);
         }

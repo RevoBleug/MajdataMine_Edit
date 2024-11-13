@@ -300,7 +300,7 @@ public partial class MainWindow : Window
     }
     private void SyntaxCheckButton_Click(object sender, RoutedEventArgs e)
     {
-        ShowErrorWindow();
+        //ShowErrorWindow();
     }
     void ShowErrorWindow()
     {
@@ -326,7 +326,7 @@ public partial class MainWindow : Window
     }
     private void SyntaxCheckButton_Click(object sender, MouseButtonEventArgs e)
     {
-        ShowErrorWindow();
+        //ShowErrorWindow();
     }
     private void MenuItem_EditorSetting_Click(object? sender, RoutedEventArgs e)
     {
@@ -491,7 +491,7 @@ public partial class MainWindow : Window
         SetSavedState(true);
         SimaiProcess.Serialize(GetRawFumenText());
         DrawWave();
-        SyntaxCheck();
+        //SyntaxCheck();
     }
 
     private void LevelTextBox_TextChanged(object sender, TextChangedEventArgs e)

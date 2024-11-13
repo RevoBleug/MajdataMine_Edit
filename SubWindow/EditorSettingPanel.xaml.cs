@@ -57,13 +57,6 @@ public partial class EditorSettingPanel : Window
         if (ComboDisplay.SelectedIndex < 0)
             ComboDisplay.SelectedIndex = 0;
 
-        PlayMethod.SelectedIndex = Array.IndexOf(
-            Enum.GetValues(window.editorSetting.editorPlayMethod.GetType()),
-            window.editorSetting.editorPlayMethod
-        );
-        if(PlayMethod.SelectedIndex < 0) 
-            PlayMethod.SelectedIndex = 0;
-
         ChartRefreshDelay.Text = window.editorSetting.ChartRefreshDelay.ToString();
         AutoUpdate.IsChecked = window.editorSetting.AutoCheckUpdate;
         SmoothSlideAnime.IsChecked = window.editorSetting.SmoothSlideAnime;
@@ -114,7 +107,6 @@ public partial class EditorSettingPanel : Window
         window.editorSetting!.ChartRefreshDelay = int.Parse(ChartRefreshDelay.Text);
         window.editorSetting!.AutoCheckUpdate = (bool) AutoUpdate.IsChecked!;
         window.editorSetting!.SmoothSlideAnime = (bool) SmoothSlideAnime.IsChecked!;
-        window.editorSetting!.editorPlayMethod = (EditorPlayMethod)PlayMethod.SelectedIndex;
         window.editorSetting!.SyntaxCheckLevel = SyntaxCheckLevel.SelectedIndex;
         // window.editorSetting.isComboEnabled = (bool) ComboDisplay.IsChecked!;
         window.editorSetting!.comboStatusType = (EditorComboIndicator)Enum.GetValues(
@@ -129,7 +121,7 @@ public partial class EditorSettingPanel : Window
 
 
         saveFlag = true;
-        window.SyntaxCheck();
+        //window.SyntaxCheck();
         Close();
     }
 
