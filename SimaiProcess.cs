@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Media.Converters;
 
 namespace MajdataEdit;
 
@@ -142,6 +143,7 @@ internal static class SimaiProcess
             double requestedTime = 0;
             var beats = 4;
             var haveNote = false;
+            var haveSV = false;
             var noteTemp = "";
             int Ycount = 0, Xcount = 0;
 
@@ -238,9 +240,9 @@ internal static class SimaiProcess
                 }
 
                 if (text[i] == 'S')
-                //Get HS
+                //Get SV
                 {
-                    haveNote = false;
+                    //haveNote = false;
                     noteTemp = "";
                     var sv_s = "";
                     if (text[i + 1] == 'V' && text[i + 2] == '*')
@@ -256,16 +258,17 @@ internal static class SimaiProcess
                         Xcount++;
                     }
                     //SV待完善
-                    curHSpeed = float.Parse(sv_s);
-                    //Console.WriteLine("SV" + curHSpeed);
+                    curSVeloc = float.Parse(sv_s);
+                    Console.WriteLine("SV" + curSVeloc);
+                    haveSV = true;
                     continue;
                 }
 
                 if (isNote(text[i])) haveNote = true;
-                if (haveNote && text[i] != ',') noteTemp += text[i];
+                if ((haveNote || haveSV) && text[i] != ',') noteTemp += text[i];
                 if (text[i] == ',')
                 {
-                    if (haveNote)
+                    if (haveNote || haveSV)
                     {
                         if (noteTemp.Contains('`'))
                         {
@@ -290,12 +293,13 @@ internal static class SimaiProcess
                         noteTemp = "";
                     }
 
-                    _timinglist.Add(new SimaiTimingPoint(time, Xcount, Ycount, "", bpm));
+                    _timinglist.Add(new SimaiTimingPoint(time, Xcount, Ycount, "", bpm, curHSpeed, curSVeloc));
 
 
                     time += 1d / (bpm / 60d) * 4d / beats;
                     //Console.WriteLine(time);
                     haveNote = false;
+                    haveSV = false;
                 }
             }
 
@@ -445,7 +449,7 @@ internal class SimaiTimingPoint
         }
 
         if (noteText.Contains('f')) simaiNote.isHanabi = true;
-        //if (noteText.Contains('m')) simaiNote.isMine = true;
+        if (noteText.Contains('c')) simaiNote.canSVAffect = false;
 
         //hold
         if (noteText.Contains('h'))
@@ -567,6 +571,12 @@ internal class SimaiTimingPoint
         {
             simaiNote.isEx = true;
             noteText = noteText.Replace("x", "");
+        }
+
+        if (noteText.Contains('c'))
+        {
+            simaiNote.canSVAffect = false;
+            noteText = noteText.Replace("c", "");
         }
 
         //starHead
@@ -725,6 +735,7 @@ internal class SimaiNote
     public bool isSlideBreak;
     public bool isSlideMine;
     public bool isSlideNoHead;
+    public bool canSVAffect = true;
 
     public string? noteContent; //used for star explain
     public SimaiNoteType noteType;
